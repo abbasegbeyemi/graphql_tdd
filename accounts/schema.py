@@ -11,6 +11,7 @@ class UserType(DjangoObjectType):
 
 
 class UserQuery(graphene.ObjectType):
+    user = graphene.Field(UserType, required=True, user_id=graphene.Int(required=True))
     users = graphene.List(UserType, required=True)
 
     @staticmethod
@@ -20,3 +21,10 @@ class UserQuery(graphene.ObjectType):
         """
 
         return User.objects.all()
+
+    @staticmethod
+    def resolve_user(root, info, user_id, **kwargs):
+        """
+        Resolves a single user
+        """
+        return User.objects.get_by_id(user_id)

@@ -145,7 +145,7 @@ class TestUserApiCalls(GraphQLTestCase):
         )
         response = self.query(
             '''
-            query {
+            query AllUsersQuery {
                 users {
                     id
                     firstName
@@ -153,6 +153,7 @@ class TestUserApiCalls(GraphQLTestCase):
                 }
             }
             ''',
+            operation_name="AllUsersQuery"
         )
 
         content = json.loads(response.content)
@@ -161,6 +162,39 @@ class TestUserApiCalls(GraphQLTestCase):
         self.assertResponseNoErrors(response)
 
         user_data = content["data"]["users"][0]
+
+        self.assertEqual(user_data["id"], str(new_user.id))
+        self.assertEqual(user_data["firstName"], new_user.first_name)
+        self.assertEqual(user_data["email"], new_user.email)
+
+    def test_single_user_query(self):
+        """
+        Test that a single user can be queried for.
+        """
+        new_user = self.User.objects.create_user(
+            email="ae@email.com",
+            password="strongpassword",
+            first_name="samson"
+        )
+        response = self.query(
+            '''
+            query SingleUserQuery ($userId: Int!) {
+                user (userId: $userId) {
+                    id
+                    firstName
+                    email
+                }
+            }
+            ''',
+            operation_name="SingleUserQuery",
+            variables={"userId": 1}
+        )
+
+        content = json.loads(response.content)
+        # Validate that no errors were received
+        self.assertResponseNoErrors(response)
+
+        user_data = content["data"]["user"]
 
         self.assertEqual(user_data["id"], str(new_user.id))
         self.assertEqual(user_data["firstName"], new_user.first_name)
