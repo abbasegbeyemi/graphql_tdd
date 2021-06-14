@@ -199,3 +199,28 @@ class TestUserApiCalls(GraphQLTestCase):
         self.assertEqual(user_data["id"], str(new_user.id))
         self.assertEqual(user_data["firstName"], new_user.first_name)
         self.assertEqual(user_data["email"], new_user.email)
+
+    def test_user_query_does_not_return_password(self):
+        """
+        Test that the users password hash cannot be queried for
+        """
+        new_user = self.User.objects.create_user(
+            email="ae@email.com",
+            password="strongpassword",
+            first_name="samson"
+        )
+        response = self.query(
+            '''
+            query MultipleUserQuery {
+                users {
+                    id
+                    firstName
+                    email
+                    password
+                }
+            }
+            ''',
+            operation_name="MultipleUserQuery",
+        )
+
+        self.assertResponseHasErrors(response)
