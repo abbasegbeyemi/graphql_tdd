@@ -1,4 +1,5 @@
 import graphene
+import graphql_jwt
 from django.contrib.auth import get_user_model
 from graphene_django import DjangoObjectType
 from .models import CustomUser as User
@@ -31,6 +32,9 @@ class UserQuery(graphene.ObjectType):
 
 
 class UserCreateMutationInput(graphene.InputObjectType):
+    """
+    Input values for user creation mutation
+    """
     email = graphene.String(required=True)
     password = graphene.String(required=True)
     first_name = graphene.String(required=True)
@@ -40,7 +44,7 @@ class UserCreateMutationInput(graphene.InputObjectType):
 class UserCreate(graphene.Mutation):
     """
     Mutation to create a user.
-    Attributes for the class to determine the mutation response
+    Returns the id of the created user.
     """
 
     id = graphene.ID()
@@ -66,3 +70,5 @@ class UserMutation(graphene.ObjectType):
     Mutation for users
     """
     user_create = UserCreate.Field()
+    login = graphql_jwt.ObtainJSONWebToken.Field()
+    verify_token = graphql_jwt.Verify.Field()

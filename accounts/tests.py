@@ -1,4 +1,5 @@
 import json
+from unittest import skip
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -91,9 +92,6 @@ class UserManagerTests(TestCase):
                 password="notstrongatall",
                 is_superuser=False
             )
-
-    def test_model_returns_correct_dict(self):
-        new_user = self.User(email)
 
     def test_get_by_id(self):
         """
@@ -282,3 +280,107 @@ class TestUserMutations(GraphQLTestCase):
             "email": created_user.email,
             "firstName": created_user.first_name,
         })
+
+
+class TestUserAuthentication(GraphQLTestCase):
+    User = get_user_model()
+    user_details = {
+        "email": "ae@email.com",
+        "password": "strong22",
+        "first_name": "Abbas"
+    }
+    """
+    Testing user authentication
+    """
+
+    def login_user(self):
+        login_response = self.query(
+            '''
+            mutation UserLogin ($email: String!, $password: String!) {
+                login(email: $email, password: $password) {
+                    token
+                }
+            }
+            ''',
+            operation_name="UserLogin",
+            variables={
+                "email": self.user_details["email"],
+                "password": self.user_details["password"]
+            }
+        )
+
+        return login_response
+
+    def setUp(self) -> None:
+        """
+        Create a user that will be authenticated
+        """
+        self.User.objects.create_user(**self.user_details)
+
+    def test_user_can_get_login_token(self):
+        """
+        Test that the user can login
+        """
+        response = self.query(
+            '''
+            mutation UserLogin ($email: String!, $password: String!) {
+                login(email: $email, password: $password) {
+                    token
+                }
+            }
+            ''',
+            operation_name="UserLogin",
+            variables={
+                "email": self.user_details["email"],
+                "password": self.user_details["password"]
+            }
+        )
+
+        """
+        Ensure no errors
+        """
+        self.assertResponseNoErrors(response)
+        content = json.loads(response.content)
+
+        """
+        Ensure the token field is returned
+        """
+        self.assertTrue("token" in content["data"]["login"])
+
+        """
+        Ensure the token returned is not None
+        """
+        self.assertIsNotNone(content["data"]["login"]["token"])
+
+    def test_user_can_verify_login_token(self):
+        """
+        Test that a user can verify a login token
+        """
+        login_response = self.login_user()
+        self.assertResponseNoErrors(login_response)
+        content = json.loads(login_response.content)
+        user_token = content["data"]["login"]["token"]
+        verify_response = self.query(
+            '''
+            mutation UserVerify ($token: String!) {
+                verifyToken(token: $token) {
+                    payload
+                }
+            }
+            ''',
+            operation_name="UserVerify",
+            variables={
+                "token": user_token
+            }
+        )
+        self.assertResponseNoErrors(verify_response)
+
+    @skip
+    def test_user_can_query_for_me(self):
+        """
+        Test that use can query for their own data when logged in
+        """
+        login_response = self.login_user()
+        self.assertResponseNoErrors(login_response)
+        content = json.loads(login_response.content)
+        user_token = content["data"]["login"]["token"]
