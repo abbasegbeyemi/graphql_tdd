@@ -1,6 +1,4 @@
 import json
-from unittest import skip
-
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from graphene_django.utils import GraphQLTestCase
