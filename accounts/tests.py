@@ -92,6 +92,9 @@ class UserManagerTests(TestCase):
                 is_superuser=False
             )
 
+    def test_model_returns_correct_dict(self):
+        new_user = self.User(email)
+
     def test_get_by_id(self):
         """
         Tests user get by id
@@ -131,13 +134,18 @@ class UserManagerTests(TestCase):
             self.User.objects.get_by_id(99)
 
 
-class TestUserApiCalls(GraphQLTestCase):
+class TestUserQueries(GraphQLTestCase):
     User = get_user_model()
 
-    def test_user_query(self):
+    def test_multiple_users_query(self):
         """
-        Test that a user created in the database is returned in a graphql query
+        Test thatall users are returned in a query
         """
+        self.User.objects.create_user(
+            email="ea@email.com",
+            password="strong3232",
+            first_name="Sabba"
+        )
         new_user = self.User.objects.create_user(
             email="ae@email.com",
             password="strong2323",
@@ -160,17 +168,25 @@ class TestUserApiCalls(GraphQLTestCase):
 
         # Validate that no errors were received
         self.assertResponseNoErrors(response)
+        self.assertEqual(len(content["data"]["users"]), 2)
 
-        user_data = content["data"]["users"][0]
+        user_data = content["data"]["users"][1]
 
-        self.assertEqual(user_data["id"], str(new_user.id))
-        self.assertEqual(user_data["firstName"], new_user.first_name)
-        self.assertEqual(user_data["email"], new_user.email)
+        self.assertDictEqual(user_data, {
+            "id": str(new_user.id),
+            "firstName": new_user.first_name,
+            "email": new_user.email
+        })
 
     def test_single_user_query(self):
         """
         Test that a single user can be queried for.
         """
+        self.User.objects.create_user(
+            email="ea@email.com",
+            password="strong3232",
+            first_name="Sabba"
+        )
         new_user = self.User.objects.create_user(
             email="ae@email.com",
             password="strongpassword",
@@ -187,7 +203,7 @@ class TestUserApiCalls(GraphQLTestCase):
             }
             ''',
             operation_name="SingleUserQuery",
-            variables={"userId": 1}
+            variables={"userId": new_user.id}
         )
 
         content = json.loads(response.content)
@@ -196,15 +212,17 @@ class TestUserApiCalls(GraphQLTestCase):
 
         user_data = content["data"]["user"]
 
-        self.assertEqual(user_data["id"], str(new_user.id))
-        self.assertEqual(user_data["firstName"], new_user.first_name)
-        self.assertEqual(user_data["email"], new_user.email)
+        self.assertDictEqual(user_data, {
+            "id": str(new_user.id),
+            "firstName": new_user.first_name,
+            "email": new_user.email
+        })
 
     def test_user_query_does_not_return_password(self):
         """
         Test that the users password hash cannot be queried for
         """
-        new_user = self.User.objects.create_user(
+        self.User.objects.create_user(
             email="ae@email.com",
             password="strongpassword",
             first_name="samson"
@@ -224,3 +242,34 @@ class TestUserApiCalls(GraphQLTestCase):
         )
 
         self.assertResponseHasErrors(response)
+
+
+class TestUserMutations(GraphQLTestCase):
+    User = get_user_model()
+
+    def test_user_mutation_creates_user(self):
+        new_user = {
+            "email": "ae@email.com",
+            "password": "strong221",
+            "firstName": "Pamilerin"
+        }
+        response = self.query(
+            '''
+            mutation UserCreateMutation ($userData: UserCreateMutationInput!) {
+                userCreate(userData: $userData) {
+                    id
+                }
+            }
+            ''',
+            operation_name="UserCreateMutation",
+            variables={"userData": new_user}
+        )
+
+        self.assertResponseNoErrors(response)
+        content = json.loads(response.content)
+
+        """
+        Check the database for the newly created user
+        """
+
+        # created_user = content["data"][""]
