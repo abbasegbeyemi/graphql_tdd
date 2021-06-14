@@ -1,7 +1,8 @@
 import graphene
 import graphql_jwt
-from django.contrib.auth import get_user_model
 from graphene_django import DjangoObjectType
+from graphql_jwt.decorators import login_required
+
 from .models import CustomUser as User
 
 
@@ -12,15 +13,23 @@ class UserType(DjangoObjectType):
 
 
 class UserQuery(graphene.ObjectType):
+    me = graphene.Field(UserType, required=True)
     user = graphene.Field(UserType, required=True, user_id=graphene.Int(required=True))
     users = graphene.List(UserType, required=True)
+
+    @staticmethod
+    @login_required
+    def resolve_me(root, info, **kwargs):
+        """
+        Resolves a logged in user
+        """
+        return info.context.user
 
     @staticmethod
     def resolve_users(root, info, **kwargs):
         """
         Resolves all users
         """
-
         return User.objects.all()
 
     @staticmethod

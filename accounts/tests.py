@@ -375,7 +375,6 @@ class TestUserAuthentication(GraphQLTestCase):
         )
         self.assertResponseNoErrors(verify_response)
 
-    @skip
     def test_user_can_query_for_me(self):
         """
         Test that use can query for their own data when logged in
@@ -384,3 +383,18 @@ class TestUserAuthentication(GraphQLTestCase):
         self.assertResponseNoErrors(login_response)
         content = json.loads(login_response.content)
         user_token = content["data"]["login"]["token"]
+
+        me_response = self.query(
+            '''
+            query MeQuery {
+                me {
+                    id
+                    firstName
+                }
+            }
+            ''',
+            headers={
+                "HTTP_AUTHORIZATION": f"JWT {user_token}"
+            })
+
+        self.assertResponseNoErrors(me_response)
