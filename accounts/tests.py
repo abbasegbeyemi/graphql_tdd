@@ -272,4 +272,13 @@ class TestUserMutations(GraphQLTestCase):
         Check the database for the newly created user
         """
 
-        # created_user = content["data"][""]
+        created_user_id = content["data"]["userCreate"]["id"]
+        created_user = self.User.objects.get_by_id(created_user_id)
+
+        # Delete the password field from the new user dict
+        del new_user["password"]
+
+        self.assertDictEqual(new_user, {
+            "email": created_user.email,
+            "firstName": created_user.first_name,
+        })
