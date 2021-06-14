@@ -137,7 +137,7 @@ class TestUserQueries(GraphQLTestCase):
 
     def test_multiple_users_query(self):
         """
-        Test thatall users are returned in a query
+        Test that all users are returned in a query
         """
         self.User.objects.create_user(
             email="ea@email.com",
@@ -388,7 +388,7 @@ class TestUserAuthentication(GraphQLTestCase):
             '''
             query MeQuery {
                 me {
-                    id
+                    email
                     firstName
                 }
             }
@@ -398,3 +398,35 @@ class TestUserAuthentication(GraphQLTestCase):
             })
 
         self.assertResponseNoErrors(me_response)
+
+        content = json.loads(me_response.content)
+
+        """
+        Ensure that the original user that looged in is who is returned
+        """
+        self.assertDictEqual(
+            content["data"]["me"],
+            {
+                "email": self.user_details["email"],
+                "firstName": self.user_details["first_name"]
+            }
+        )
+
+    def test_that_error_is_returned_for_protected_user_details(self):
+        """
+        Test to ensure that an error is returned when the user is not logged in
+        """
+        me_response = self.query(
+            '''
+            query MeQuery {
+                me {
+                    email
+                    firstName
+                }
+            }
+            ''',
+            headers={
+                "HTTP_AUTHORIZATION": f"JWT "
+            })
+
+        self.assertResponseHasErrors(me_response)
